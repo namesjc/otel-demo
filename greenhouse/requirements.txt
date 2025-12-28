@@ -19,4 +19,6 @@ psycopg2-binary
 requests
 opentelemetry-distro
 opentelemetry-exporter-otlp
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-requests
 

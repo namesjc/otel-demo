@@ -1,18 +1,17 @@
 # main_app.py
-
 import logging
 
 import requests
 from config import Config
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
-from loggingfw import CustomLogFW
+from instrumentation import init_instrumentation
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 
-logFW = CustomLogFW(service_name="main_app", instance_id="1")
-handler = logFW.setup_logging()
-logging.getLogger().addHandler(handler)
+meter_provider = init_instrumentation(app, "main_app", "1")
+meter = meter_provider.get_meter("main_app.meter", "1.0.0")
+requests_counter = meter.create_counter("requests", "requests", "requests")
 
 USER_SERVICE_URL = "http://localhost:5001"
 PLANT_SERVICE_URL = "http://localhost:5002"
@@ -23,6 +22,7 @@ BUG_SERVICE_URL = "http://localhost:5010"
 
 @app.route("/")
 def index():
+    requests_counter.add(1, {"path": "/"})
     logging.info("Rendering index page...")
     return render_template("index.html")
 
