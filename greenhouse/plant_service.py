@@ -1,20 +1,20 @@
 # plant_service.py
+
 import logging
 
 import requests
 from config import Config
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-from instrumentation import init_instrumentation
+from loggingfw import CustomLogFW
+
+logFW = CustomLogFW(service_name="plant_service", instance_id="1")
+handler = logFW.setup_logging()
+logging.getLogger().addHandler(handler)
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"{Config.DATABASE_URL}/plant_service_db"
 db = SQLAlchemy(app)
-
-meter_provider = init_instrumentation(app, "plant_service", "1")
-meter = meter_provider.get_meter("plant_service.meter", "1.0.0")
-plant_counter = meter.create_counter("plants", "plants", "plants")
-
 
 SIMULATION_SERVICE_URL = "http://simulation_service:5003"
 BUGS = False
@@ -47,8 +47,6 @@ def add_plant():
     db.session.add(new_plant)
     db.session.commit()
     logging.info(f"New plant {data['plant_name']} added successfully.")
-    plant_counter.add(1, {"plant_type": data["plant_type"]})
-
     # Start simulation for this user
     simulation_response = requests.post(
         f"{SIMULATION_SERVICE_URL}/start_simulation", json={"user_id": data["user_id"]}

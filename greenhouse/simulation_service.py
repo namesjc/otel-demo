@@ -1,4 +1,5 @@
 # simulation_service.py
+
 import logging
 import threading
 from random import randint, uniform
@@ -7,15 +8,15 @@ import requests
 from config import Config
 from flask import Flask, request
 from flask_socketio import SocketIO, join_room, leave_room
-from instrumentation import init_instrumentation
+from loggingfw import CustomLogFW
+
+logFW = CustomLogFW(service_name="simulation_service", instance_id="1")
+handler = logFW.setup_logging()
+logging.getLogger().addHandler(handler)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*", engineio_logger=True)
-
-meter_provider = init_instrumentation(app, "simulation_service", "1")
-meter = meter_provider.get_meter("simulation_service.meter", "1.0.0")
-simulation_counter = meter.create_counter("simulations", "simulations", "simulations")
 
 BUGS = False
 
@@ -39,7 +40,6 @@ def start_simulation():
         simulation_threads[user_id] = thread
         thread.start()
         logging.info(f"Simulation started for user {user_id}.")
-        simulation_counter.add(1, {"user_id": user_id})
         return "Simulation started", 200
     return "Invalid user_id", 400
 

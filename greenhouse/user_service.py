@@ -1,22 +1,22 @@
 # user_service.py
+
 import logging
 
 from config import Config
 from flask import Flask, jsonify, request, session
 from flask_sqlalchemy import SQLAlchemy
-from instrumentation import init_instrumentation
+from loggingfw import CustomLogFW
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
+
+logFW = CustomLogFW(service_name="user_service", instance_id="1")
+handler = logFW.setup_logging()
+logging.getLogger().addHandler(handler)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 app.config["SQLALCHEMY_DATABASE_URI"] = f"{Config.DATABASE_URL}/user_service_db"
 db = SQLAlchemy(app)
-
-meter_provider = init_instrumentation(app, "user_service", "1")
-meter = meter_provider.get_meter("user_service.meter", "1.0.0")
-signup_counter = meter.create_counter("signups", "signups", "signups")
-
 
 BUGS = False
 
@@ -46,7 +46,6 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         logging.info(f"New user created: {username}")
-        signup_counter.add(1, {"username": username})
         return jsonify({"message": "Signup successful"}), 200
     except IntegrityError:
         db.session.rollback()
