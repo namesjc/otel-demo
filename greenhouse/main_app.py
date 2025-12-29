@@ -122,7 +122,10 @@ def dashboard():
                 sim_span.set_attribute("error", True)
                 logging.error("Failed to start simulation")
                 return "Failed to start simulation", 500
+            sim_span.set_attribute("result", "success")
 
+        span.set_attribute("result", "success")
+        logging.info(f"Dashboard loaded successfully for user {user_id}")
         return render_template("dashboard.html", user=user, plants=plants)
 
 
@@ -161,12 +164,16 @@ def signup():
 
             if response.status_code == 200:
                 span.set_attribute("result", "success")
+                logging.info(
+                    f"User signup successful for {request.form.get('username', '')}"
+                )
                 return redirect(url_for("login"))
             else:
                 error_counter.add(
                     1, {"error_type": "signup_failed", "endpoint": "signup"}
                 )
                 span.set_attribute("error", True)
+                logging.error(f"Signup failed for {request.form.get('username', '')}")
             return response.text
 
         return render_template("signup.html")
@@ -216,6 +223,7 @@ def logout():
         else:
             error_counter.add(1, {"error_type": "logout_failed", "endpoint": "logout"})
             span.set_attribute("error", True)
+            logging.error("Failed to logout user")
 
         return redirect(url_for("index"))
 

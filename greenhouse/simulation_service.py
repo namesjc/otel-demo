@@ -101,6 +101,7 @@ def start_simulation():
         )
         span.set_attribute("error", True)
         span.set_attribute("error.type", "invalid_user_id")
+        logging.error("Start simulation failed: Invalid user_id provided")
         return "Invalid user_id", 400
 
 
@@ -119,6 +120,7 @@ def handle_connect():
     if user_id:
         with tracer.start_as_current_span("websocket_connect") as span:
             span.set_attribute("user.id", user_id)
+            span.set_attribute("result", "success")
             active_users[user_id] = True
             join_room(str(user_id))
             connections_gauge.add(1, {"user_id": str(user_id)})
@@ -131,6 +133,7 @@ def on_disconnect():
     if user_id in active_users:
         with tracer.start_as_current_span("websocket_disconnect") as span:
             span.set_attribute("user.id", user_id)
+            span.set_attribute("result", "success")
             del active_users[user_id]
             leave_room(str(user_id))
             connections_gauge.add(-1, {"user_id": str(user_id)})

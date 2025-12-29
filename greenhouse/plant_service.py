@@ -96,16 +96,19 @@ def add_plant():
             user_id=data["user_id"],
         )
 
-        with tracer.start_as_current_span("database_add_plant"):
+        with tracer.start_as_current_span("database_add_plant") as db_span:
             db.session.add(new_plant)
             db.session.commit()
+            db_span.set_attribute("plant.id", new_plant.id)
+            db_span.set_attribute("result", "success")
 
         active_plants_gauge.add(1, {"user_id": str(data["user_id"])})
         span.set_attribute("plant.id", new_plant.id)
         logging.info(f"New plant {data['plant_name']} added successfully.")
 
         # Start simulation for this user
-        with tracer.start_as_current_span("start_simulation"):
+        with tracer.start_as_current_span("start_simulation") as sim_span:
+            sim_span.set_attribute("user.id", data["user_id"])
             simulation_response = requests.post(
                 f"{SIMULATION_SERVICE_URL}/start_simulation",
                 json={"user_id": data["user_id"]},
@@ -115,7 +118,11 @@ def add_plant():
                     1, {"error_type": "simulation_failed", "operation": "add_plant"}
                 )
                 span.set_attribute("simulation.error", True)
+                sim_span.set_attribute("error", True)
+                logging.error(f"Failed to start simulation for user {data['user_id']}")
                 return "Failed to start simulation", 500
+            sim_span.set_attribute("result", "success")
+            logging.info(f"Started simulation for user {data['user_id']}")
 
         span.set_attribute("result", "success")
         return jsonify({"plant_id": new_plant.id}), 201
@@ -140,11 +147,14 @@ def get_plants(user_id):
             BUGS = False
             return "Failed to add plant", 500
 
-        with tracer.start_as_current_span("database_query_plants"):
+        with tracer.start_as_current_span("database_query_plants") as db_span:
             plants = Plant.query.filter_by(user_id=user_id).all()
+            db_span.set_attribute("plants.count", len(plants))
+            db_span.set_attribute("result", "success")
 
         span.set_attribute("plants.count", len(plants))
         span.set_attribute("result", "success")
+        logging.info(f"Retrieved {len(plants)} plants for user {user_id}")
 
         return jsonify(
             [

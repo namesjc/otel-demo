@@ -91,9 +91,11 @@ def signup():
             return "Failed to create user", 500
 
         try:
-            with tracer.start_as_current_span("database_create_user"):
+            with tracer.start_as_current_span("database_create_user") as db_span:
                 db.session.add(new_user)
                 db.session.commit()
+                db_span.set_attribute("user.id", new_user.id)
+                db_span.set_attribute("result", "success")
 
             span.set_attribute("user.id", new_user.id)
             span.set_attribute("result", "success")
@@ -143,13 +145,18 @@ def login():
         password = request.form["password"]
         span.set_attribute("username", username)
 
-        with tracer.start_as_current_span("database_query_user"):
+        with tracer.start_as_current_span("database_query_user") as db_span:
             user = User.query.filter_by(username=username).first()
+            db_span.set_attribute("username", username)
+            if user:
+                db_span.set_attribute("result", "success")
+                db_span.set_attribute("user.id", user.id)
 
         if user and check_password_hash(user.password_hash, password):
             session["user_id"] = user.id
             span.set_attribute("user.id", user.id)
             span.set_attribute("result", "success")
+            logging.info(f"User {username} logged in successfully")
             return jsonify({"user_id": user.id}), 200
 
         error_counter.add(
@@ -165,8 +172,12 @@ def login():
 def logout():
     with tracer.start_as_current_span("logout") as span:
         user_operations_counter.add(1, {"operation": "logout"})
+        user_id = session.get("user_id")
+        if user_id:
+            span.set_attribute("user.id", user_id)
         session.pop("user_id", None)
         span.set_attribute("result", "success")
+        logging.info(f"User logged out successfully")
         return jsonify({"message": "Logout successful"}), 200
 
 
@@ -176,8 +187,11 @@ def get_user(user_id):
         user_operations_counter.add(1, {"operation": "get_user"})
         span.set_attribute("user.id", user_id)
 
-        with tracer.start_as_current_span("database_query_user"):
+        with tracer.start_as_current_span("database_query_user") as db_span:
             user = User.query.get(user_id)
+            if user:
+                db_span.set_attribute("result", "success")
+                db_span.set_attribute("username", user.username)
 
         if not user:
             error_counter.add(
@@ -185,10 +199,12 @@ def get_user(user_id):
             )
             span.set_attribute("error", True)
             span.set_attribute("error.type", "user_not_found")
+            logging.error(f"User {user_id} not found")
             return jsonify({"error": "User not found"}), 404
 
         span.set_attribute("username", user.username)
         span.set_attribute("result", "success")
+        logging.info(f"Retrieved user data for {user.username}")
         return jsonify({"id": user.id, "username": user.username}), 200
 
 
