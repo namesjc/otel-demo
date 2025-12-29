@@ -89,6 +89,30 @@ class CustomOtelFW:
             logger_provider=self.logger_provider,
         )
 
+        # Add a filter that injects the current OpenTelemetry trace id into log records
+        class TraceIdFilter(logging.Filter):
+            def filter(self, record: logging.LogRecord) -> bool:
+                try:
+                    span = trace.get_current_span()
+                    span_context = span.get_span_context()
+                    if span_context and span_context.trace_id:
+                        # trace_id is an int; format as 32-char hex with leading zeros
+                        record.trace_id = format(span_context.trace_id, "032x")
+                    else:
+                        record.trace_id = None
+                except Exception:
+                    record.trace_id = None
+                return True
+
+        # Attach the filter to the handler
+        handler.addFilter(TraceIdFilter())
+
+        # Set a formatter that includes trace_id if present
+        formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s [trace_id=%(trace_id)s] %(name)s: %(message)s"
+        )
+        handler.setFormatter(formatter)
+
         return handler
 
     def setup_tracing(self) -> trace.Tracer:
