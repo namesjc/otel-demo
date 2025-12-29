@@ -157,6 +157,7 @@ def login():
         )
         span.set_attribute("error", True)
         span.set_attribute("error.type", "invalid_credentials")
+        logging.error(f"Login failed for username: {username}, check your password.")
         return jsonify({"error": "Login failed"}), 401
 
 

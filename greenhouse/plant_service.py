@@ -8,6 +8,8 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from loggingfw import CustomOtelFW
 
+logging.basicConfig(level=logging.INFO)
+
 # Initialize OpenTelemetry framework
 otelFW = CustomOtelFW(service_name="plant_service", instance_id="1")
 

@@ -85,7 +85,6 @@ class CustomOtelFW:
 
         # Create a LoggingHandler with the specified logger provider and log level set to NOTSET.
         handler = LoggingHandler(
-            level=logging.DEBUG,
             logger_provider=self.logger_provider,
         )
 

@@ -53,7 +53,7 @@ datasources:
       filterByTraceID: true
       filterBySpanID: false
     tracesToMetrics:
-      datasourceUid: 'prom'
+      datasourceUid: prometheus
       spanStartTimeShift: '-1h'
       spanEndTimeShift: '1h'
       tags: [{ key: 'service.name', value: 'service' }, { key: 'job' }]
