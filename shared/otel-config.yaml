@@ -10,6 +10,10 @@ exporters:
   # NOTE: Prior to v0.86.0 use `logging` instead of `debug`.
   debug:
     verbosity: detailed
+  otlp/jaeger:
+    endpoint: "http://jaeger:4317"
+    tls:
+      insecure: true
   otlp/tempo:
     endpoint: "http://tempo:4317"
     tls:
@@ -34,15 +38,15 @@ connectors:
       - name: http.status_code
       - name: host.name
     exemplars:
-      enabled: true
+      enabled: false
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [debug, otlp/tempo, spanmetrics]
+      exporters: [debug, otlp/jaeger, otlp/tempo]
     metrics:
-      receivers: [otlp, spanmetrics]
+      receivers: [otlp]
       exporters: [debug, otlphttp/prometheus]
     logs:
       receivers: [otlp]

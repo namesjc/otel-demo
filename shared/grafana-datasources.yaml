@@ -15,6 +15,7 @@ datasources:
     derivedFields:
       - name: TraceID
         matcherRegex: "trace_id=(\\w+)"
+        # url: 'http://jaeger:16686/$${__value.raw}'
         url: '$${__value.raw}'
         datasourceUid: tempo
         urlDisplayLabel: 'View Trace'
@@ -33,7 +34,37 @@ datasources:
     exemplarTraceIdDestinations:
       - datasourceUid: tempo
         name: trace_id
-        urlDisplayLabel: View in Tempo
+        urlDisplayLabel: View in trace
+- name: Jaeger
+  uid: jaeger
+  type: jaeger
+  access: proxy
+  url: http://jaeger:16686
+  isDefault: false
+  editable: true
+  jsonData:
+    tracesToLogsV2:
+      datasourceUid: loki
+      spanStartTimeShift: '-1h'
+      spanEndTimeShift: '1h'
+      filterByTraceID: false
+      filterBySpanID: false
+    tracesToMetrics:
+      datasourceUid: prometheus
+      spanStartTimeShift: '-1h'
+      spanEndTimeShift: '1h'
+      tags: [{ key: 'service.name', value: 'service' }, { key: 'job' }]
+      queries:
+        - name: 'Sample query'
+          query: 'sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))'
+    traceQuery:
+      timeShiftEnabled: true
+      spanStartTimeShift: '1h'
+      spanEndTimeShift: '-1h'
+    spanBar:
+      type: 'None'
+    nodeGraph:
+      enabled: true
 - name: Tempo
   type: tempo
   access: proxy
